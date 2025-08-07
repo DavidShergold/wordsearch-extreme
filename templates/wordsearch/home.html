@@ -104,6 +104,73 @@
             text-decoration: none;
         }
         
+        .footer {
+            background: rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(10px);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 20px 0;
+            margin-top: 40px;
+            color: white;
+        }
+        
+        .footer-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .footer-brand {
+            display: flex;
+            align-items: center;
+            font-weight: bold;
+        }
+        
+        .footer-brand i {
+            color: #FFD700;
+            margin-right: 8px;
+            font-size: 1.2rem;
+        }
+        
+        .footer-links {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+        
+        .footer-link {
+            color: rgba(255, 255, 255, 0.8);
+            text-decoration: none;
+            font-size: 14px;
+            transition: color 0.3s ease;
+        }
+        
+        .footer-link:hover {
+            color: white;
+            text-decoration: none;
+        }
+        
+        .footer-copyright {
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.7);
+        }
+        
+        @media (max-width: 768px) {
+            .footer-content {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .footer-links {
+                flex-direction: column;
+                gap: 10px;
+            }
+        }
+        
         .game-container {
             background: rgba(255, 255, 255, 0.95);
             border-radius: 20px;
@@ -509,6 +576,38 @@
         </div>
     </div>
     
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-content">
+            <!-- Brand -->
+            <div class="footer-brand">
+                <i class="fas fa-copyright"></i>
+                Shergold Industries
+            </div>
+            
+            <!-- Links -->
+            <div class="footer-links">
+                <a href="#" class="footer-link">
+                    <i class="fas fa-info-circle me-1"></i>About
+                </a>
+                <a href="#" class="footer-link">
+                    <i class="fas fa-envelope me-1"></i>Contact
+                </a>
+                <a href="#" class="footer-link">
+                    <i class="fas fa-shield-alt me-1"></i>Privacy
+                </a>
+                <a href="#" class="footer-link">
+                    <i class="fas fa-file-contract me-1"></i>Terms
+                </a>
+            </div>
+            
+            <!-- Copyright -->
+            <div class="footer-copyright">
+                © 2025 Shergold Industries. All rights reserved.
+            </div>
+        </div>
+    </footer>
+
     <!-- Completion Modal -->
     <div class="completion-modal" id="completionModal">
         <div class="completion-content">
@@ -527,6 +626,8 @@
         let foundWords = [];
         let selectedCells = [];
         let isSelecting = false;
+        let startCell = null;
+        let selectionDirection = null;
         
         // Words data from Django
         const wordsToFind = [
@@ -534,6 +635,18 @@
             "{{ word|upper }}"{% if not forloop.last %},{% endif %}
             {% endfor %}
         ];
+        
+        // Direction vectors: [row_delta, col_delta]
+        const directions = {
+            horizontal: [0, 1],      // right
+            horizontalRev: [0, -1],  // left
+            vertical: [1, 0],        // down
+            verticalRev: [-1, 0],    // up
+            diagonal1: [1, 1],       // down-right
+            diagonal1Rev: [-1, -1],  // up-left
+            diagonal2: [1, -1],      // down-left
+            diagonal2Rev: [-1, 1]    // up-right
+        };
         
         function startGame() {
             gameStarted = true;
@@ -548,27 +661,122 @@
                 cell.addEventListener('mouseenter', continueSelection);
                 cell.addEventListener('mouseup', endSelection);
             });
+            
+            // Prevent text selection while dragging
+            document.addEventListener('selectstart', e => {
+                if (isSelecting) e.preventDefault();
+            });
         }
         
         function startSelection(e) {
             if (!gameStarted) return;
+            e.preventDefault();
+            
             isSelecting = true;
+            startCell = e.target;
             selectedCells = [e.target];
+            selectionDirection = null;
+            
+            clearPreviousSelection();
             e.target.classList.add('selected');
         }
         
         function continueSelection(e) {
-            if (!gameStarted || !isSelecting) return;
-            if (!selectedCells.includes(e.target)) {
-                selectedCells.push(e.target);
-                e.target.classList.add('selected');
+            if (!gameStarted || !isSelecting || !startCell) return;
+            
+            const currentCell = e.target;
+            const startRow = parseInt(startCell.dataset.row);
+            const startCol = parseInt(startCell.dataset.col);
+            const currentRow = parseInt(currentCell.dataset.row);
+            const currentCol = parseInt(currentCell.dataset.col);
+            
+            // Calculate direction from start to current cell
+            const rowDiff = currentRow - startRow;
+            const colDiff = currentCol - startCol;
+            
+            // If we're still on the starting cell, do nothing
+            if (rowDiff === 0 && colDiff === 0) return;
+            
+            // Determine the direction
+            let detectedDirection = null;
+            let distance = 0;
+            
+            // Check each direction to see which one matches
+            for (const [dirName, [dRow, dCol]] of Object.entries(directions)) {
+                if (rowDiff === 0 && colDiff === 0) continue;
+                
+                // Check if the current cell lies on this direction line
+                if (dRow === 0 && dCol !== 0) {
+                    // Horizontal line
+                    if (rowDiff === 0 && Math.sign(colDiff) === Math.sign(dCol)) {
+                        detectedDirection = dirName;
+                        distance = Math.abs(colDiff);
+                        break;
+                    }
+                } else if (dCol === 0 && dRow !== 0) {
+                    // Vertical line
+                    if (colDiff === 0 && Math.sign(rowDiff) === Math.sign(dRow)) {
+                        detectedDirection = dirName;
+                        distance = Math.abs(rowDiff);
+                        break;
+                    }
+                } else if (dRow !== 0 && dCol !== 0) {
+                    // Diagonal line
+                    if (Math.abs(rowDiff) === Math.abs(colDiff) && 
+                        Math.sign(rowDiff) === Math.sign(dRow) && 
+                        Math.sign(colDiff) === Math.sign(dCol)) {
+                        detectedDirection = dirName;
+                        distance = Math.abs(rowDiff);
+                        break;
+                    }
+                }
+            }
+            
+            // If no valid direction detected, ignore this cell
+            if (!detectedDirection) return;
+            
+            // If this is the first direction detection, lock it in
+            if (!selectionDirection) {
+                selectionDirection = detectedDirection;
+            }
+            
+            // Only continue if we're moving in the locked direction
+            if (detectedDirection !== selectionDirection) return;
+            
+            // Build the selection line
+            clearPreviousSelection();
+            selectedCells = [];
+            
+            const [dRow, dCol] = directions[selectionDirection];
+            
+            for (let i = 0; i <= distance; i++) {
+                const row = startRow + (i * dRow);
+                const col = startCol + (i * dCol);
+                
+                const cell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+                if (cell) {
+                    selectedCells.push(cell);
+                    cell.classList.add('selected');
+                }
             }
         }
         
         function endSelection() {
             if (!gameStarted || !isSelecting) return;
+            
             isSelecting = false;
+            startCell = null;
+            selectionDirection = null;
+            
             checkWord();
+        }
+        
+        function clearPreviousSelection() {
+            document.querySelectorAll('.puzzle-cell.selected').forEach(cell => {
+                if (!cell.classList.contains('found')) {
+                    cell.classList.remove('selected');
+                }
+            });
         }
         
         function checkWord() {
@@ -664,11 +872,6 @@
             }
             return cookieValue;
         }
-        
-        // Prevent text selection while dragging
-        document.addEventListener('selectstart', e => {
-            if (isSelecting) e.preventDefault();
-        });
     </script>
 </body>
 </html>

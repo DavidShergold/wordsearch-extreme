@@ -1,0 +1,464 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Create Puzzle - WordSearch Extreme{% endblock %}
+
+{% block extra_css %}
+<style>
+    .word-input-group {
+        margin-bottom: 10px;
+    }
+    
+    .preview-grid {
+        font-family: monospace;
+        font-size: 14px;
+        line-height: 1.2;
+        background: #f8f9fa;
+        padding: 15px;
+        border-radius: 10px;
+        border: 2px solid #dee2e6;
+        overflow-x: auto;
+    }
+    
+    .form-section {
+        margin-bottom: 30px;
+    }
+    
+    .section-header {
+        border-bottom: 2px solid #667eea;
+        padding-bottom: 10px;
+        margin-bottom: 20px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-lg">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="card card-custom">
+                <div class="card-header card-header-custom text-center">
+                    <h2 class="mb-0">
+                        <i class="fas fa-plus-circle"></i> Create New Word Search Puzzle
+                    </h2>
+                </div>
+                
+                <div class="card-body">
+                    <form method="post" id="puzzleForm">
+                        {% csrf_token %}
+                        
+                        <!-- Basic Information Section -->
+                        <div class="form-section">
+                            <h4 class="section-header">
+                                <i class="fas fa-info-circle text-primary"></i> Basic Information
+                            </h4>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="title" class="form-label fw-bold">Puzzle Title *</label>
+                                        <input type="text" class="form-control" id="title" name="title" required
+                                               placeholder="Enter puzzle title...">
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="category" class="form-label fw-bold">Category</label>
+                                        <select class="form-select" id="category" name="category">
+                                            <option value="">Select category...</option>
+                                            <option value="Animals">Animals</option>
+                                            <option value="Colors">Colors</option>
+                                            <option value="Countries">Countries</option>
+                                            <option value="Food">Food & Drinks</option>
+                                            <option value="Sports">Sports</option>
+                                            <option value="Technology">Technology</option>
+                                            <option value="Nature">Nature</option>
+                                            <option value="Movies">Movies & TV</option>
+                                            <option value="Music">Music</option>
+                                            <option value="Education">Education</option>
+                                            <option value="Other">Other</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="difficulty" class="form-label fw-bold">Difficulty Level *</label>
+                                        <select class="form-select" id="difficulty" name="difficulty" required>
+                                            <option value="">Select difficulty...</option>
+                                            <option value="easy">Easy (8x8 grid)</option>
+                                            <option value="medium">Medium (12x12 grid)</option>
+                                            <option value="hard">Hard (16x16 grid)</option>
+                                            <option value="extreme">Extreme (20x20 grid)</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="grid_size" class="form-label fw-bold">Grid Size</label>
+                                        <input type="number" class="form-control" id="grid_size" name="grid_size" 
+                                               min="8" max="25" value="12" readonly>
+                                        <small class="form-text text-muted">Grid size is automatically set based on difficulty</small>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="description" class="form-label fw-bold">Description</label>
+                                <textarea class="form-control" id="description" name="description" rows="3"
+                                          placeholder="Optional description for your puzzle..."></textarea>
+                            </div>
+                        </div>
+                        
+                        <!-- Words Section -->
+                        <div class="form-section">
+                            <h4 class="section-header">
+                                <i class="fas fa-list text-success"></i> Words to Find
+                            </h4>
+                            
+                            <div class="alert alert-info">
+                                <i class="fas fa-lightbulb"></i>
+                                <strong>Tips:</strong> Add 5-15 words. Words should be 3-12 characters long and contain only letters.
+                                The system will automatically generate the puzzle grid and place words in different directions.
+                            </div>
+                            
+                            <div id="wordsContainer">
+                                <div class="word-input-group">
+                                    <div class="input-group">
+                                        <input type="text" class="form-control word-input" name="words[]" 
+                                               placeholder="Enter a word..." pattern="[A-Za-z]{3,12}" required>
+                                        <button type="button" class="btn btn-outline-danger remove-word" style="display: none;">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="d-flex gap-2 mb-3">
+                                <button type="button" id="addWord" class="btn btn-outline-primary">
+                                    <i class="fas fa-plus"></i> Add Word
+                                </button>
+                                <button type="button" id="clearWords" class="btn btn-outline-warning">
+                                    <i class="fas fa-eraser"></i> Clear All
+                                </button>
+                                <button type="button" id="suggestionBtn" class="btn btn-outline-info">
+                                    <i class="fas fa-magic"></i> Get Suggestions
+                                </button>
+                            </div>
+                            
+                            <div id="wordCount" class="text-muted">
+                                <small>Words added: <span id="count">1</span> (Recommended: 5-15 words)</small>
+                            </div>
+                        </div>
+                        
+                        <!-- Preview Section -->
+                        <div class="form-section">
+                            <h4 class="section-header">
+                                <i class="fas fa-eye text-warning"></i> Preview
+                            </h4>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6>Words List:</h6>
+                                    <div id="wordsPreview" class="preview-grid">
+                                        <em class="text-muted">Words will appear here as you type...</em>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-6">
+                                    <h6>Puzzle Info:</h6>
+                                    <div id="puzzleInfo" class="preview-grid">
+                                        <div><strong>Title:</strong> <span id="previewTitle">-</span></div>
+                                        <div><strong>Category:</strong> <span id="previewCategory">-</span></div>
+                                        <div><strong>Difficulty:</strong> <span id="previewDifficulty">-</span></div>
+                                        <div><strong>Grid Size:</strong> <span id="previewGridSize">-</span></div>
+                                        <div><strong>Word Count:</strong> <span id="previewWordCount">0</span></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Submit Section -->
+                        <div class="text-center">
+                            <button type="button" id="validateBtn" class="btn btn-outline-secondary me-2">
+                                <i class="fas fa-check-circle"></i> Validate Puzzle
+                            </button>
+                            <button type="submit" class="btn btn-gradient btn-lg px-5">
+                                <i class="fas fa-save"></i> Create Puzzle
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Word Suggestions Modal -->
+<div class="modal fade" id="suggestionsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Word Suggestions</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Choose a category to get word suggestions:</p>
+                <div class="row" id="suggestionCategories">
+                    <!-- Categories will be populated by JavaScript -->
+                </div>
+                <hr>
+                <div id="suggestionWords"></div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    let wordCount = 1;
+    
+    // Word suggestions by category
+    const wordSuggestions = {
+        'Animals': ['CAT', 'DOG', 'LION', 'TIGER', 'ELEPHANT', 'GIRAFFE', 'ZEBRA', 'MONKEY', 'RABBIT', 'HORSE', 'BEAR', 'WOLF'],
+        'Colors': ['RED', 'BLUE', 'GREEN', 'YELLOW', 'PURPLE', 'ORANGE', 'PINK', 'BLACK', 'WHITE', 'BROWN', 'GREY', 'VIOLET'],
+        'Countries': ['USA', 'CANADA', 'MEXICO', 'BRAZIL', 'FRANCE', 'GERMANY', 'ITALY', 'SPAIN', 'JAPAN', 'CHINA', 'INDIA', 'AUSTRALIA'],
+        'Food': ['PIZZA', 'BURGER', 'PASTA', 'SALAD', 'CHICKEN', 'FISH', 'BREAD', 'CHEESE', 'APPLE', 'BANANA', 'ORANGE', 'CAKE'],
+        'Sports': ['SOCCER', 'BASKETBALL', 'TENNIS', 'GOLF', 'SWIMMING', 'RUNNING', 'CYCLING', 'BASEBALL', 'FOOTBALL', 'HOCKEY', 'BOXING', 'SKIING'],
+        'Technology': ['COMPUTER', 'INTERNET', 'SOFTWARE', 'HARDWARE', 'CODING', 'WEBSITE', 'DATABASE', 'PYTHON', 'JAVASCRIPT', 'MOBILE', 'ROBOT', 'AI']
+    };
+    
+    // Update grid size based on difficulty
+    document.getElementById('difficulty').addEventListener('change', function() {
+        const difficulty = this.value;
+        const gridSizeInput = document.getElementById('grid_size');
+        const sizes = { 'easy': 8, 'medium': 12, 'hard': 16, 'extreme': 20 };
+        gridSizeInput.value = sizes[difficulty] || 12;
+        updatePreview();
+    });
+    
+    // Add word functionality
+    document.getElementById('addWord').addEventListener('click', function() {
+        wordCount++;
+        const container = document.getElementById('wordsContainer');
+        const div = document.createElement('div');
+        div.className = 'word-input-group';
+        div.innerHTML = `
+            <div class="input-group">
+                <input type="text" class="form-control word-input" name="words[]" 
+                       placeholder="Enter a word..." pattern="[A-Za-z]{3,12}">
+                <button type="button" class="btn btn-outline-danger remove-word">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        `;
+        container.appendChild(div);
+        updateWordCount();
+        updateRemoveButtons();
+    });
+    
+    // Remove word functionality
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.remove-word')) {
+            e.target.closest('.word-input-group').remove();
+            wordCount--;
+            updateWordCount();
+            updateRemoveButtons();
+            updatePreview();
+        }
+    });
+    
+    // Clear all words
+    document.getElementById('clearWords').addEventListener('click', function() {
+        if (confirm('Are you sure you want to clear all words?')) {
+            const container = document.getElementById('wordsContainer');
+            container.innerHTML = `
+                <div class="word-input-group">
+                    <div class="input-group">
+                        <input type="text" class="form-control word-input" name="words[]" 
+                               placeholder="Enter a word..." pattern="[A-Za-z]{3,12}" required>
+                        <button type="button" class="btn btn-outline-danger remove-word" style="display: none;">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+            wordCount = 1;
+            updateWordCount();
+            updatePreview();
+        }
+    });
+    
+    // Update word count display
+    function updateWordCount() {
+        document.getElementById('count').textContent = wordCount;
+    }
+    
+    // Update remove button visibility
+    function updateRemoveButtons() {
+        const removeButtons = document.querySelectorAll('.remove-word');
+        removeButtons.forEach(btn => {
+            btn.style.display = wordCount > 1 ? 'block' : 'none';
+        });
+    }
+    
+    // Update preview
+    function updatePreview() {
+        // Update puzzle info
+        document.getElementById('previewTitle').textContent = 
+            document.getElementById('title').value || '-';
+        document.getElementById('previewCategory').textContent = 
+            document.getElementById('category').value || '-';
+        document.getElementById('previewDifficulty').textContent = 
+            document.getElementById('difficulty').value || '-';
+        document.getElementById('previewGridSize').textContent = 
+            document.getElementById('grid_size').value + 'x' + document.getElementById('grid_size').value;
+        
+        // Update words preview
+        const words = Array.from(document.querySelectorAll('.word-input'))
+            .map(input => input.value.trim().toUpperCase())
+            .filter(word => word.length > 0);
+        
+        document.getElementById('previewWordCount').textContent = words.length;
+        
+        const wordsPreview = document.getElementById('wordsPreview');
+        if (words.length > 0) {
+            wordsPreview.innerHTML = words.map((word, index) => 
+                `<div>${index + 1}. ${word}</div>`
+            ).join('');
+        } else {
+            wordsPreview.innerHTML = '<em class="text-muted">Words will appear here as you type...</em>';
+        }
+    }
+    
+    // Add event listeners for real-time preview updates
+    document.addEventListener('input', updatePreview);
+    document.addEventListener('change', updatePreview);
+    
+    // Word suggestions modal
+    document.getElementById('suggestionBtn').addEventListener('click', function() {
+        const modal = new bootstrap.Modal(document.getElementById('suggestionsModal'));
+        
+        // Populate categories
+        const categoriesContainer = document.getElementById('suggestionCategories');
+        categoriesContainer.innerHTML = Object.keys(wordSuggestions).map(category => 
+            `<div class="col-md-4 col-sm-6 mb-2">
+                <button type="button" class="btn btn-outline-primary w-100 suggestion-category" 
+                        data-category="${category}">${category}</button>
+            </div>`
+        ).join('');
+        
+        modal.show();
+    });
+    
+    // Handle category selection in suggestions
+    document.addEventListener('click', function(e) {
+        if (e.target.classList.contains('suggestion-category')) {
+            const category = e.target.dataset.category;
+            const words = wordSuggestions[category];
+            const wordsContainer = document.getElementById('suggestionWords');
+            
+            wordsContainer.innerHTML = `
+                <h6>Suggested words for ${category}:</h6>
+                <div class="d-flex flex-wrap gap-2">
+                    ${words.map(word => 
+                        `<button type="button" class="btn btn-sm btn-outline-success add-suggested-word" 
+                                data-word="${word}">${word}</button>`
+                    ).join('')}
+                </div>
+            `;
+        }
+        
+        if (e.target.classList.contains('add-suggested-word')) {
+            const word = e.target.dataset.word;
+            // Find first empty input or add new one
+            const inputs = document.querySelectorAll('.word-input');
+            let emptyInput = Array.from(inputs).find(input => !input.value.trim());
+            
+            if (!emptyInput) {
+                document.getElementById('addWord').click();
+                emptyInput = document.querySelector('.word-input:last-of-type');
+            }
+            
+            emptyInput.value = word;
+            updatePreview();
+            
+            // Disable the button
+            e.target.disabled = true;
+            e.target.classList.replace('btn-outline-success', 'btn-success');
+            e.target.innerHTML = `${word} â`;
+        }
+    });
+    
+    // Form validation
+    document.getElementById('validateBtn').addEventListener('click', function() {
+        const words = Array.from(document.querySelectorAll('.word-input'))
+            .map(input => input.value.trim())
+            .filter(word => word.length > 0);
+        
+        let errors = [];
+        
+        if (!document.getElementById('title').value.trim()) {
+            errors.push('Title is required');
+        }
+        
+        if (!document.getElementById('difficulty').value) {
+            errors.push('Difficulty level is required');
+        }
+        
+        if (words.length < 3) {
+            errors.push('At least 3 words are required');
+        }
+        
+        words.forEach((word, index) => {
+            if (!/^[A-Za-z]{3,12}$/.test(word)) {
+                errors.push(`Word ${index + 1} "${word}" must be 3-12 letters only`);
+            }
+        });
+        
+        // Check for duplicates
+        const duplicates = words.filter((word, index) => 
+            words.indexOf(word.toUpperCase()) !== index
+        );
+        
+        if (duplicates.length > 0) {
+            errors.push('Duplicate words found: ' + duplicates.join(', '));
+        }
+        
+        if (errors.length > 0) {
+            alert('Validation Errors:\n' + errors.join('\n'));
+        } else {
+            alert('Puzzle validation passed! â\n\nYour puzzle looks good and ready to create.');
+        }
+    });
+    
+    // Form submission
+    document.getElementById('puzzleForm').addEventListener('submit', function(e) {
+        const words = Array.from(document.querySelectorAll('.word-input'))
+            .map(input => input.value.trim())
+            .filter(word => word.length > 0);
+        
+        if (words.length < 3) {
+            e.preventDefault();
+            alert('Please add at least 3 words to create a puzzle.');
+            return;
+        }
+        
+        // Show loading indicator
+        const submitBtn = this.querySelector('button[type="submit"]');
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating Puzzle...';
+        submitBtn.disabled = true;
+    });
+    
+    // Initialize
+    updatePreview();
+    updateRemoveButtons();
+});
+</script>
+{% endblock %}

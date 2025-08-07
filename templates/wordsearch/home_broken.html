@@ -1,0 +1,773 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}WordSearch Extreme{% endblock %}
+
+{% block extra_css %}
+<style>
+    body {
+        background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+        min-height: 100vh;
+        font-family: 'Arial', sans-serif;
+    }
+    
+    .game-container {
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 20px;
+        box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+        margin: 40px auto;
+        max-width: 800px;
+        padding: 40px;
+        text-align: center;
+    }
+    
+    .game-title {
+        font-size: 3rem;
+        font-weight: bold;
+        color: #1e3c72;
+        margin-bottom: 10px;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .game-subtitle {
+        color: #666;
+        font-size: 1.2rem;
+        margin-bottom: 30px;
+    }
+    
+    .progress-section {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 20px;
+        border-radius: 15px;
+        margin-bottom: 30px;
+    }
+    
+    .progress-title {
+        font-size: 1.4rem;
+        margin-bottom: 15px;
+        font-weight: bold;
+    }
+    
+    .progress-bar {
+        background: rgba(255,255,255,0.3);
+        border-radius: 10px;
+        height: 20px;
+        overflow: hidden;
+        margin-bottom: 10px;
+    }
+    
+    .progress-fill {
+        background: linear-gradient(90deg, #4facfe 0%, #00f2fe 100%);
+        height: 100%;
+        border-radius: 10px;
+        transition: width 0.5s ease;
+    }
+    
+    .progress-text {
+        font-size: 1.1rem;
+        opacity: 0.9;
+    }
+    
+    .puzzle-section {
+        background: #f8f9fa;
+        border-radius: 15px;
+        padding: 30px;
+        margin-bottom: 30px;
+        border: 3px solid #e9ecef;
+    }
+    
+    .puzzle-title {
+        font-size: 2rem;
+        color: #333;
+        margin-bottom: 15px;
+        font-weight: bold;
+    }
+    
+    .puzzle-info {
+        display: flex;
+        justify-content: space-around;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+    }
+    
+    .info-item {
+        background: white;
+        padding: 15px 20px;
+        border-radius: 10px;
+        margin: 5px;
+        box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+        min-width: 120px;
+    }
+    
+    .info-label {
+        font-size: 0.9rem;
+        color: #666;
+        margin-bottom: 5px;
+    }
+    
+    .info-value {
+        font-size: 1.3rem;
+        font-weight: bold;
+        color: #333;
+    }
+    
+    .difficulty-badge {
+        display: inline-block;
+        padding: 8px 20px;
+        border-radius: 20px;
+        font-weight: bold;
+        text-transform: uppercase;
+        font-size: 0.9rem;
+        margin-bottom: 20px;
+    }
+    
+    .difficulty-easy { background: #d4edda; color: #155724; }
+    .difficulty-medium { background: #fff3cd; color: #856404; }
+    .difficulty-hard { background: #f8d7da; color: #721c24; }
+    .difficulty-extreme { background: #d1ecf1; color: #0c5460; }
+    
+    .play-button {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        padding: 15px 40px;
+        border-radius: 25px;
+        font-size: 1.3rem;
+        font-weight: bold;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        display: inline-block;
+        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+    }
+    
+    .play-button:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 25px rgba(102, 126, 234, 0.6);
+        color: white;
+        text-decoration: none;
+    }
+    
+    .login-prompt {
+        background: #fff3cd;
+        border: 1px solid #ffeaa7;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    
+    .login-button {
+        background: #007bff;
+        color: white;
+        border: none;
+        padding: 10px 25px;
+        border-radius: 20px;
+        text-decoration: none;
+        margin: 0 10px;
+    }
+    
+    .completion-celebration {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        color: white;
+        padding: 40px;
+        border-radius: 20px;
+        text-align: center;
+    }
+    
+    .celebration-icon {
+        font-size: 4rem;
+        margin-bottom: 20px;
+    }
+    
+    .no-puzzles {
+        background: #f8d7da;
+        color: #721c24;
+        padding: 30px;
+        border-radius: 15px;
+        text-align: center;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="game-container">
+        <h1 class="game-title">🔍 WordSearch Extreme</h1>
+        <p class="game-subtitle">Challenge yourself with progressive word search puzzles!</p>
+        
+        {% if user.is_authenticated %}
+            {% if current_puzzle %}
+                <!-- Progress Section -->
+                <div class="progress-section">
+                    <div class="progress-title">Your Progress</div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: {% widthratio completed_count total_puzzles 100 %}%"></div>
+                    </div>
+                    <div class="progress-text">
+                        {{ completed_count }} of {{ total_puzzles }} puzzles completed
+                        {% if completed_count > 0 %}
+                            ({{ completed_count|floatformat:0 }}/{{ total_puzzles }} - {% widthratio completed_count total_puzzles 100 %}%)
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- Current Puzzle Section -->
+                <div class="puzzle-section">
+                    <h2 class="puzzle-title">{{ current_puzzle.title }}</h2>
+                    
+                    <div class="difficulty-badge difficulty-{{ current_puzzle.difficulty }}">
+                        {{ current_puzzle.get_difficulty_display }}
+                    </div>
+                    
+                    {% if current_puzzle.description %}
+                    <p style="color: #666; margin-bottom: 20px;">{{ current_puzzle.description }}</p>
+                    {% endif %}
+                    
+                    <div class="puzzle-info">
+                        <div class="info-item">
+                            <div class="info-label">Grid Size</div>
+                            <div class="info-value">{{ current_puzzle.width }}×{{ current_puzzle.height }}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Words to Find</div>
+                            <div class="info-value">{{ current_puzzle.word_count }}</div>
+                        </div>
+                        {% if user_attempt.words_found %}
+                        <div class="info-item">
+                            <div class="info-label">Found</div>
+                            <div class="info-value">{{ user_attempt.words_found|length }}/{{ current_puzzle.word_count }}</div>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    {% if user_attempt.is_completed %}
+                        <div style="background: #d4edda; color: #155724; padding: 15px; border-radius: 10px; margin-bottom: 20px;">
+                            <i class="fas fa-check-circle"></i> Puzzle Completed! 
+                            {% if user_attempt.time_taken %}
+                                Time: {{ user_attempt.time_taken }}
+                            {% endif %}
+                        </div>
+                        <a href="{% url 'wordsearch:home' %}" class="play-button">
+                            <i class="fas fa-forward"></i> Next Puzzle
+                        </a>
+                    {% else %}
+                        <a href="{% url 'wordsearch:puzzle_detail' current_puzzle.pk %}" class="play-button">
+                            {% if user_attempt.words_found %}
+                                <i class="fas fa-play"></i> Continue Playing
+                            {% else %}
+                                <i class="fas fa-play"></i> Start Playing
+                            {% endif %}
+                        </a>
+                    {% endif %}
+                </div>
+                
+            {% elif all_completed %}
+                <!-- All Puzzles Completed -->
+                <div class="completion-celebration">
+                    <div class="celebration-icon">🎉</div>
+                    <h2>Congratulations!</h2>
+                    <p>You've completed all {{ total_puzzles }} puzzles!</p>
+                    <p>You are a WordSearch Extreme Master!</p>
+                </div>
+            {% else %}
+                <!-- No Puzzles Available -->
+                <div class="no-puzzles">
+                    <h3>No Puzzles Available</h3>
+                    <p>There are currently no puzzles to play. Check back later!</p>
+                </div>
+            {% endif %}
+            
+        {% else %}
+            <!-- Not Logged In -->
+            {% if current_puzzle %}
+                <div class="login-prompt">
+                    <h4>🎮 Ready to Start Your Journey?</h4>
+                    <p>Log in to track your progress and unlock new puzzles as you complete them!</p>
+                    <a href="/admin/login/" class="login-button">Login</a>
+                    <a href="/admin/" class="login-button" style="background: #28a745;">Sign Up</a>
+                </div>
+                
+                <!-- Preview of First Puzzle -->
+                <div class="puzzle-section">
+                    <h2 class="puzzle-title">{{ current_puzzle.title }}</h2>
+                    <div class="difficulty-badge difficulty-{{ current_puzzle.difficulty }}">
+                        {{ current_puzzle.get_difficulty_display }}
+                    </div>
+                    
+                    {% if current_puzzle.description %}
+                    <p style="color: #666; margin-bottom: 20px;">{{ current_puzzle.description }}</p>
+                    {% endif %}
+                    
+                    <div class="puzzle-info">
+                        <div class="info-item">
+                            <div class="info-label">Grid Size</div>
+                            <div class="info-value">{{ current_puzzle.width }}×{{ current_puzzle.height }}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Words to Find</div>
+                            <div class="info-value">{{ current_puzzle.word_count }}</div>
+                        </div>
+                    </div>
+                    
+                    <a href="{% url 'wordsearch:puzzle_detail' current_puzzle.pk %}" class="play-button">
+                        <i class="fas fa-play"></i> Try First Puzzle
+                    </a>
+                </div>
+            {% else %}
+                <div class="no-puzzles">
+                    <h3>No Puzzles Available</h3>
+                    <p>There are currently no puzzles to play. Check back later!</p>
+                </div>
+            {% endif %}
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+        border: none;
+
+        border-radius: 15px;
+
+        overflow: hidden;
+
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+
+        margin-bottom: 30px;
+
+    }
+
+    
+
+    .puzzle-card:hover {
+
+        transform: translateY(-5px);
+
+        box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+
+    }
+
+    
+
+    .puzzle-card-header {
+
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+
+        color: white;
+
+        padding: 20px;
+
+        border: none;
+
+    }
+
+    
+
+    .puzzle-card-body {
+
+        padding: 25px;
+
+    }
+
+    
+
+    .difficulty-badge {
+
+        display: inline-block;
+
+        padding: 5px 15px;
+
+        border-radius: 20px;
+
+        font-size: 0.8rem;
+
+        font-weight: bold;
+
+        margin-bottom: 10px;
+
+    }
+
+    
+
+    .stats-mini {
+
+        display: flex;
+
+        justify-content: space-between;
+
+        margin-top: 15px;
+
+        font-size: 0.9rem;
+
+        color: #666;
+
+    }
+
+    
+
+    .feature-card {
+
+        text-align: center;
+
+        padding: 30px 20px;
+
+        border-radius: 15px;
+
+        background: white;
+
+        box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+
+        margin-bottom: 30px;
+
+        transition: transform 0.3s ease;
+
+    }
+
+    
+
+    .feature-card:hover {
+
+        transform: translateY(-3px);
+
+    }
+
+    
+
+    .feature-icon {
+
+        font-size: 3rem;
+
+        margin-bottom: 20px;
+
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+
+        -webkit-background-clip: text;
+
+        -webkit-text-fill-color: transparent;
+
+        background-clip: text;
+
+    }
+
+</style>
+
+{% endblock %}
+
+
+
+{% block content %}
+
+<!-- Hero Section -->
+
+<div class="hero-section">
+
+    <div class="container">
+
+        <h1 class="hero-title">ÃÂ­ÃÂ·ÃÂ© WordSearch Extreme</h1>
+
+        <p class="hero-subtitle">Challenge your mind with engaging word search puzzles</p>
+
+        <div class="hero-buttons">
+
+            <a href="{% url 'wordsearch:puzzle_list' %}" class="btn btn-light btn-lg hover-lift">
+
+                <i class="fas fa-play"></i> Start Playing
+
+            </a>
+
+            {% if user.is_authenticated %}
+
+            <a href="{% url 'wordsearch:puzzle_create' %}" class="btn btn-outline-light btn-lg hover-lift">
+
+                <i class="fas fa-plus-circle"></i> Create Puzzle
+
+            </a>
+
+            {% else %}
+
+            <a href="/admin/login/" class="btn btn-outline-light btn-lg hover-lift">
+
+                <i class="fas fa-sign-in-alt"></i> Login to Create
+
+            </a>
+
+            {% endif %}
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+<!-- Featured Puzzles Section -->
+
+{% if featured_puzzles %}
+
+<section class="container">
+
+    <h2 class="section-title">Featured Puzzles</h2>
+
+    <div class="row">
+
+        {% for puzzle in featured_puzzles %}
+
+        <div class="col-lg-4 col-md-6">
+
+            <div class="card puzzle-card">
+
+                <div class="puzzle-card-header">
+
+                    <h5 class="card-title mb-0">{{ puzzle.title }}</h5>
+
+                </div>
+
+                <div class="puzzle-card-body">
+
+                    <span class="difficulty-badge difficulty-{{ puzzle.difficulty }}">
+
+                        {{ puzzle.get_difficulty_display }}
+
+                    </span>
+
+                    
+
+                    {% if puzzle.category %}
+
+                    <p class="text-muted mb-2">
+
+                        <i class="fas fa-tag"></i> {{ puzzle.category }}
+
+                    </p>
+
+                    {% endif %}
+
+                    
+
+                    {% if puzzle.description %}
+
+                    <p class="card-text">{{ puzzle.description|truncatewords:15 }}</p>
+
+                    {% endif %}
+
+                    
+
+                    <div class="stats-mini">
+
+                        <span><i class="fas fa-th"></i> {{ puzzle.grid_size }}x{{ puzzle.grid_size }}</span>
+
+                        <span><i class="fas fa-list"></i> {{ puzzle.words|length }} words</span>
+
+                        <span><i class="fas fa-eye"></i> {{ puzzle.play_count }} plays</span>
+
+                    </div>
+
+                    
+
+                    <div class="mt-3">
+
+                        <a href="{% url 'wordsearch:puzzle_detail' puzzle.pk %}" class="btn btn-gradient w-100">
+
+                            <i class="fas fa-play"></i> Play Now
+
+                        </a>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        {% endfor %}
+
+    </div>
+
+    
+
+    <div class="text-center mt-4">
+
+        <a href="{% url 'wordsearch:puzzle_list' %}" class="btn btn-outline-primary btn-lg">
+
+            <i class="fas fa-th-large"></i> View All Puzzles
+
+        </a>
+
+    </div>
+
+</section>
+
+{% endif %}
+
+
+
+<!-- Features Section -->
+
+<section class="container mt-5">
+
+    <h2 class="section-title">Why Choose WordSearch Extreme?</h2>
+
+    <div class="row">
+
+        <div class="col-lg-4 col-md-6">
+
+            <div class="feature-card">
+
+                <div class="feature-icon">
+
+                    <i class="fas fa-brain"></i>
+
+                </div>
+
+                <h4>Brain Training</h4>
+
+                <p>Improve your vocabulary, pattern recognition, and cognitive skills with challenging word puzzles.</p>
+
+            </div>
+
+        </div>
+
+        
+
+        <div class="col-lg-4 col-md-6">
+
+            <div class="feature-card">
+
+                <div class="feature-icon">
+
+                    <i class="fas fa-mobile-alt"></i>
+
+                </div>
+
+                <h4>Responsive Design</h4>
+
+                <p>Play anywhere, anytime! Our puzzles work perfectly on desktop, tablet, and mobile devices.</p>
+
+            </div>
+
+        </div>
+
+        
+
+        <div class="col-lg-4 col-md-6">
+
+            <div class="feature-card">
+
+                <div class="feature-icon">
+
+                    <i class="fas fa-trophy"></i>
+
+                </div>
+
+                <h4>Multiple Difficulties</h4>
+
+                <p>From Easy to Extreme difficulty levels, challenge yourself with puzzles that match your skill.</p>
+
+            </div>
+
+        </div>
+
+        
+
+        <div class="col-lg-4 col-md-6">
+
+            <div class="feature-card">
+
+                <div class="feature-icon">
+
+                    <i class="fas fa-stopwatch"></i>
+
+                </div>
+
+                <h4>Timed Challenges</h4>
+
+                <p>Race against the clock and track your solving time to improve your performance.</p>
+
+            </div>
+
+        </div>
+
+        
+
+        <div class="col-lg-4 col-md-6">
+
+            <div class="feature-card">
+
+                <div class="feature-icon">
+
+                    <i class="fas fa-lightbulb"></i>
+
+                </div>
+
+                <h4>Smart Hints</h4>
+
+                <p>Stuck on a word? Get intelligent hints that help you learn without giving away the answer.</p>
+
+            </div>
+
+        </div>
+
+        
+
+        <div class="col-lg-4 col-md-6">
+
+            <div class="feature-card">
+
+                <div class="feature-icon">
+
+                    <i class="fas fa-plus-circle"></i>
+
+                </div>
+
+                <h4>Create Puzzles</h4>
+
+                <p>Design your own word search puzzles and share them with friends and family.</p>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+
+<!-- Call to Action -->
+
+<section class="container text-center mt-5 mb-5">
+
+    <div class="hero-section" style="padding: 40px 0;">
+
+        <h3>Ready to Challenge Your Mind?</h3>
+
+        <p class="lead">Join thousands of puzzle enthusiasts and start your word search adventure today!</p>
+
+        <div class="hero-buttons">
+
+            <a href="{% url 'wordsearch:puzzle_list' %}" class="btn btn-light btn-lg">
+
+                <i class="fas fa-puzzle-piece"></i> Browse Puzzles
+
+            </a>
+
+            {% if not user.is_authenticated %}
+
+            <a href="/admin/login/" class="btn btn-outline-light btn-lg">
+
+                <i class="fas fa-user-plus"></i> Get Started
+
+            </a>
+
+            {% endif %}
+
+        </div>
+
+    </div>
+
+</section>
+
+{% endblock %}
+
