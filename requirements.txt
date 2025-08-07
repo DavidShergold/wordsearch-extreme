@@ -22,3 +22,6 @@ django-debug-toolbar==4.4.6
 # Testing
 pytest-django==4.8.0
 factory-boy==3.3.0
+
+# PostgreSQL Database Adapter
+psycopg2-binary==2.9.9
