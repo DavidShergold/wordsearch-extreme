@@ -51,6 +51,33 @@ class WordSearchPuzzle(models.Model):
         """Return the number of words in the puzzle."""
         return len(self.words_data) if self.words_data else 0
     
+    @property
+    def grid_size(self):
+        """Return the grid size (assuming square grid)."""
+        if self.grid_data and isinstance(self.grid_data, list):
+            return len(self.grid_data)  # Number of rows
+        return self.width
+    
+    @property
+    def words_list(self):
+        """Return list of words to find."""
+        if self.words_data:
+            return [word.get('word', '') for word in self.words_data]
+        return []
+    
+    @property
+    def grid_display(self):
+        """Return grid formatted for display."""
+        if not self.grid_data:
+            return []
+        
+        # If grid_data is a 2D array
+        if isinstance(self.grid_data, list) and len(self.grid_data) > 0:
+            return [' '.join(row) for row in self.grid_data]
+        
+        # If grid_data is a flat array or string, convert to 2D
+        return []
+    
     def increment_play_count(self):
         """Increment the play count."""
         self.play_count += 1

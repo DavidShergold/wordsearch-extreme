@@ -1,61 +1,674 @@
-{% extends 'base.html' %}
-{% load static %}
-
-{% block title %}Home - WordSearch Extreme{% endblock %}
-
-{% block content %}
-<div class="row">
-    <div class="col-md-12">
-        <div class="jumbotron bg-primary text-white p-5 rounded mb-4">
-            <h1 class="display-4">Welcome to WordSearch Extreme!</h1>
-            <p class="lead">Challenge yourself with our collection of word search puzzles.</p>
-            <a class="btn btn-light btn-lg" href="{% url 'wordsearch:puzzle_list' %}" role="button">
-                Browse Puzzles
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Word Search Extreme - Play Now</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .header {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 15px 0;
+            margin-bottom: 20px;
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            color: white;
+            text-decoration: none;
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+        
+        .logo i {
+            font-size: 2rem;
+            margin-right: 10px;
+            color: #FFD700;
+        }
+        
+        .header-nav {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        .nav-link {
+            color: white;
+            text-decoration: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+        
+        .nav-link:hover {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            text-decoration: none;
+        }
+        
+        .user-info {
+            display: flex;
+            align-items: center;
+            color: white;
+            gap: 15px;
+        }
+        
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, #FFD700, #FFA500);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .btn-header {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+        
+        .btn-header:hover {
+            background: rgba(255, 255, 255, 0.3);
+            color: white;
+            text-decoration: none;
+        }
+        
+        .game-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            margin: 20px;
+            padding: 30px;
+            min-height: calc(100vh - 40px);
+            overflow: visible; /* Ensure no content is cut off */
+        }
+        
+        .leaderboard-section {
+            background: linear-gradient(145deg, #f8f9fa, #e9ecef);
+            border-radius: 15px;
+            padding: 20px;
+            height: fit-content;
+            box-shadow: inset 0 4px 8px rgba(0,0,0,0.1);
+        }
+        
+        .leaderboard-title {
+            color: #495057;
+            font-weight: bold;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .leaderboard-item {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            margin-bottom: 8px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: transform 0.2s ease;
+        }
+        
+        .leaderboard-item:hover {
+            transform: translateX(5px);
+        }
+        
+        .rank-badge {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+            margin-right: 15px;
+            font-size: 14px;
+        }
+        
+        .rank-1 { background: linear-gradient(45deg, #FFD700, #FFA500); }
+        .rank-2 { background: linear-gradient(45deg, #C0C0C0, #A9A9A9); }
+        .rank-3 { background: linear-gradient(45deg, #CD7F32, #8B4513); }
+        .rank-other { background: linear-gradient(45deg, #6c757d, #495057); }
+        
+        .player-info {
+            flex-grow: 1;
+        }
+        
+        .player-name {
+            font-weight: bold;
+            color: #212529;
+            margin-bottom: 2px;
+        }
+        
+        .player-level {
+            font-size: 12px;
+            color: #6c757d;
+        }
+        
+        .game-section {
+            padding-left: 30px;
+            overflow: visible;
+        }
+        
+        .game-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .game-title {
+            color: #495057;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .progress-container {
+            max-width: 400px;
+            margin: 0 auto 20px;
+        }
+        
+        .puzzle-grid {
+            display: grid;
+            grid-template-columns: repeat(20, 26px);
+            grid-template-rows: repeat(20, 26px);
+            gap: 1px;
+            justify-content: center;
+            margin: 0 auto 20px;
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 15px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+            width: fit-content;
+        }
+        
+        .puzzle-cell {
+            width: 26px;
+            height: 26px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: white;
+            border: 1px solid #dee2e6;
+            border-radius: 3px;
+            font-weight: bold;
+            font-size: 11px;
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.15s ease;
+            box-sizing: border-box;
+        }
+        
+        .puzzle-cell:hover {
+            background-color: #e3f2fd;
+            transform: scale(1.1);
+            z-index: 1;
+            position: relative;
+        }
+        
+        .puzzle-cell.selected {
+            background-color: #2196f3;
+            color: white;
+            border-color: #1976d2;
+        }
+        
+        .puzzle-cell.found {
+            background-color: #4caf50;
+            color: white;
+            border-color: #388e3c;
+        }
+        
+        .words-section {
+            text-align: center;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        .words-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .word-badge {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 12px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .word-badge:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        
+        .word-badge.found {
+            background: linear-gradient(45deg, #4caf50, #388e3c);
+            text-decoration: line-through;
+            opacity: 0.7;
+        }
+        
+        .game-controls {
+            text-align: center;
+            margin-top: 20px;
+        }
+        
+        .control-btn {
+            margin: 0 10px;
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        
+        .completion-modal {
+            background: rgba(0,0,0,0.8);
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        
+        .completion-content {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            max-width: 400px;
+        }
+        
+        @media (max-width: 768px) {
+            .header-content {
+                flex-direction: column;
+                gap: 15px;
+                text-align: center;
+            }
+            
+            .header-nav {
+                order: 2;
+            }
+            
+            .user-info {
+                order: 1;
+                justify-content: center;
+            }
+            
+            .game-section {
+                padding-left: 0;
+                margin-top: 30px;
+            }
+            
+            .puzzle-grid {
+                grid-template-columns: repeat(15, 1fr);
+                max-width: 100%;
+            }
+            
+            .puzzle-cell {
+                width: 20px;
+                height: 20px;
+                font-size: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <!-- Logo -->
+            <a href="{% url 'wordsearch:home' %}" class="logo">
+                <i class="fas fa-search"></i>
+                Word Search Extreme
             </a>
-            {% if user.is_authenticated %}
-            <a class="btn btn-outline-light btn-lg ms-2" href="{% url 'wordsearch:puzzle_create' %}" role="button">
-                Create Puzzle
-            </a>
-            {% endif %}
-        </div>
-    </div>
-</div>
-
-<div class="row">
-    <div class="col-md-12">
-        <h2>Featured Puzzles</h2>
-        <div class="row">
-            {% for puzzle in featured_puzzles %}
-            <div class="col-md-4 mb-4">
-                <div class="card">
-                    <div class="card-body">
-                        <h5 class="card-title">{{ puzzle.title }}</h5>
-                        <p class="card-text">{{ puzzle.description|truncatewords:15 }}</p>
-                        <div class="d-flex justify-content-between align-items-center">
-                            <span class="badge bg-{{ puzzle.difficulty|yesno:'success,warning,danger' }}">
-                                {{ puzzle.get_difficulty_display }}
-                            </span>
-                            <small class="text-muted">{{ puzzle.word_count }} words</small>
+            
+            <!-- Navigation -->
+            <nav class="header-nav">
+                <a href="{% url 'wordsearch:home' %}" class="nav-link">
+                    <i class="fas fa-home me-1"></i>Play
+                </a>
+                {% if request.user.is_authenticated %}
+                <a href="{% url 'wordsearch:puzzle_list' %}" class="nav-link">
+                    <i class="fas fa-list me-1"></i>Browse
+                </a>
+                <a href="{% url 'wordsearch:puzzle_create' %}" class="nav-link">
+                    <i class="fas fa-plus me-1"></i>Create
+                </a>
+                {% endif %}
+            </nav>
+            
+            <!-- User Info -->
+            <div class="user-info">
+                {% if request.user.is_authenticated %}
+                    <div class="d-flex align-items-center">
+                        <div class="user-avatar">
+                            {{ request.user.username|first|upper }}
                         </div>
-                        <div class="mt-2">
-                            <a href="{% url 'wordsearch:puzzle_detail' puzzle.pk %}" class="btn btn-primary">
-                                Play Now
-                            </a>
-                            <small class="text-muted ms-2">Played {{ puzzle.play_count }} times</small>
+                        <div class="ms-2">
+                            <div style="font-size: 14px; font-weight: bold;">{{ request.user.username }}</div>
+                            <div style="font-size: 12px; opacity: 0.8;">Level {{ current_level|default:1 }}</div>
                         </div>
                     </div>
+                    <a href="/admin/logout/" class="btn-header">
+                        <i class="fas fa-sign-out-alt me-1"></i>Logout
+                    </a>
+                {% else %}
+                    <a href="/admin/login/" class="btn-header">
+                        <i class="fas fa-sign-in-alt me-1"></i>Login
+                    </a>
+                    <a href="/admin/" class="btn-header">
+                        <i class="fas fa-user-plus me-1"></i>Sign Up
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+    </header>
+
+    <div class="game-container">
+        <div class="row">
+            <!-- Leaderboard Section -->
+            <div class="col-lg-3 col-md-4">
+                <div class="leaderboard-section">
+                    <h4 class="leaderboard-title">
+                        <i class="fas fa-trophy text-warning"></i> Leaderboard
+                    </h4>
+                    
+                    {% if leaderboard %}
+                        {% for player in leaderboard %}
+                        <div class="leaderboard-item">
+                            <div class="rank-badge rank-{% if forloop.counter <= 3 %}{{ forloop.counter }}{% else %}other{% endif %}">
+                                {{ forloop.counter }}
+                            </div>
+                            <div class="player-info">
+                                <div class="player-name">{{ player.username }}</div>
+                                <div class="player-level">Level {{ player.highest_level|default:0 }}</div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center text-muted">
+                            <i class="fas fa-users fa-2x mb-3"></i>
+                            <p>No players yet.<br>Be the first to complete a puzzle!</p>
+                        </div>
+                    {% endif %}
                 </div>
             </div>
-            {% empty %}
-            <div class="col-12">
-                <p class="text-muted">No puzzles available yet. 
-                {% if user.is_authenticated %}
-                <a href="{% url 'wordsearch:puzzle_create' %}">Create the first one!</a>
-                {% endif %}
-                </p>
+            
+            <!-- Game Section -->
+            <div class="col-lg-9 col-md-8">
+                <div class="game-section">
+                    {% if current_puzzle %}
+                    <div class="game-header">
+                        <h2 class="game-title">
+                            <i class="fas fa-search me-2"></i>Level {{ current_level }}
+                        </h2>
+                        
+                        {% if progress_percentage is not None %}
+                        <div class="progress-container">
+                            <div class="progress mb-2" style="height: 20px;">
+                                <div class="progress-bar bg-success" style="width: {{ progress_percentage }}%">
+                                    {{ progress_percentage }}%
+                                </div>
+                            </div>
+                            <small class="text-muted">{{ completed_count }} levels completed • Infinite puzzles available!</small>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Game Grid -->
+                    <div class="puzzle-grid" id="puzzleGrid">
+                        {% for row in current_puzzle.grid_data %}
+                            {% for cell in row %}
+                                <div class="puzzle-cell" 
+                                     data-row="{{ forloop.parentloop.counter0 }}" 
+                                     data-col="{{ forloop.counter0 }}"
+                                     data-letter="{{ cell }}">
+                                    {{ cell }}
+                                </div>
+                            {% endfor %}
+                        {% endfor %}
+                    </div>
+                    
+                    <!-- Words to Find -->
+                    <div class="words-section">
+                        <h5><i class="fas fa-list me-2"></i>Find {{ current_puzzle.words_list|length }} Words</h5>
+                        <div class="words-grid">
+                            {% for word in current_puzzle.words_list %}
+                            <div class="word-badge" data-word="{{ word|upper }}">
+                                {{ word|upper }}
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
+                    <!-- Game Controls -->
+                    <div class="game-controls">
+                        <button class="btn btn-primary control-btn" onclick="startGame()">
+                            <i class="fas fa-play me-2"></i>Start Game
+                        </button>
+                        <button class="btn btn-warning control-btn" onclick="getHint()">
+                            <i class="fas fa-lightbulb me-2"></i>Hint
+                        </button>
+                        <button class="btn btn-secondary control-btn" onclick="resetGame()">
+                            <i class="fas fa-redo me-2"></i>Reset
+                        </button>
+                    </div>
+                    
+                    {% else %}
+                    <!-- All Puzzles Completed -->
+                    <div class="text-center">
+                        <div class="alert alert-success p-5">
+                            <i class="fas fa-trophy fa-4x text-warning mb-3"></i>
+                            <h2>🎉 Congratulations! 🎉</h2>
+                            <p class="lead">You've completed all {{ total_puzzles }} levels!</p>
+                            <p>You are a Word Search Champion!</p>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
             </div>
-            {% endfor %}
         </div>
     </div>
-</div>
-{% endblock %}
+    
+    <!-- Completion Modal -->
+    <div class="completion-modal" id="completionModal">
+        <div class="completion-content">
+            <i class="fas fa-star fa-3x text-warning mb-3"></i>
+            <h3>Level Complete!</h3>
+            <p>Congratulations! You found all the words.</p>
+            <button class="btn btn-primary" onclick="nextLevel()">
+                <i class="fas fa-arrow-right me-2"></i>Next Level
+            </button>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let gameStarted = false;
+        let foundWords = [];
+        let selectedCells = [];
+        let isSelecting = false;
+        
+        // Words data from Django
+        const wordsToFind = [
+            {% for word in current_puzzle.words_list %}
+            "{{ word|upper }}"{% if not forloop.last %},{% endif %}
+            {% endfor %}
+        ];
+        
+        function startGame() {
+            gameStarted = true;
+            document.querySelector('.control-btn').innerHTML = '<i class="fas fa-pause me-2"></i>Pause';
+            addGridEventListeners();
+        }
+        
+        function addGridEventListeners() {
+            const cells = document.querySelectorAll('.puzzle-cell');
+            cells.forEach(cell => {
+                cell.addEventListener('mousedown', startSelection);
+                cell.addEventListener('mouseenter', continueSelection);
+                cell.addEventListener('mouseup', endSelection);
+            });
+        }
+        
+        function startSelection(e) {
+            if (!gameStarted) return;
+            isSelecting = true;
+            selectedCells = [e.target];
+            e.target.classList.add('selected');
+        }
+        
+        function continueSelection(e) {
+            if (!gameStarted || !isSelecting) return;
+            if (!selectedCells.includes(e.target)) {
+                selectedCells.push(e.target);
+                e.target.classList.add('selected');
+            }
+        }
+        
+        function endSelection() {
+            if (!gameStarted || !isSelecting) return;
+            isSelecting = false;
+            checkWord();
+        }
+        
+        function checkWord() {
+            const word = selectedCells.map(cell => cell.dataset.letter).join('');
+            const reverseWord = word.split('').reverse().join('');
+            
+            if (wordsToFind.includes(word) || wordsToFind.includes(reverseWord)) {
+                // Mark as found
+                selectedCells.forEach(cell => {
+                    cell.classList.remove('selected');
+                    cell.classList.add('found');
+                });
+                
+                const targetWord = wordsToFind.includes(word) ? word : reverseWord;
+                foundWords.push(targetWord);
+                
+                // Update word badge
+                const wordBadge = document.querySelector(`[data-word="${targetWord}"]`);
+                if (wordBadge) {
+                    wordBadge.classList.add('found');
+                }
+                
+                // Check if all words found
+                if (foundWords.length === wordsToFind.length) {
+                    setTimeout(() => {
+                        document.getElementById('completionModal').style.display = 'flex';
+                    }, 500);
+                }
+            } else {
+                // Clear selection
+                selectedCells.forEach(cell => {
+                    cell.classList.remove('selected');
+                });
+            }
+            
+            selectedCells = [];
+        }
+        
+        function getHint() {
+            // Simple hint: highlight first letter of an unfound word
+            const unfoundWords = wordsToFind.filter(word => !foundWords.includes(word));
+            if (unfoundWords.length > 0) {
+                alert(`Hint: Look for "${unfoundWords[0]}"`);
+            }
+        }
+        
+        function resetGame() {
+            foundWords = [];
+            document.querySelectorAll('.puzzle-cell').forEach(cell => {
+                cell.classList.remove('selected', 'found');
+            });
+            document.querySelectorAll('.word-badge').forEach(badge => {
+                badge.classList.remove('found');
+            });
+        }
+        
+        function nextLevel() {
+            // Send completion to server
+            fetch('{% url "wordsearch:complete_level" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: 'level={{ current_level }}'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    window.location.reload(); // Reload to show next level
+                } else {
+                    console.error('Error completing level:', data.error);
+                    window.location.reload(); // Reload anyway
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                window.location.reload(); // Reload anyway
+            });
+        }
+        
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+        
+        // Prevent text selection while dragging
+        document.addEventListener('selectstart', e => {
+            if (isSelecting) e.preventDefault();
+        });
+    </script>
+</body>
+</html>

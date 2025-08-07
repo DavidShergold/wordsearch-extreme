@@ -13,6 +13,7 @@ app_name = 'wordsearch'
 urlpatterns = [
     # Web views
     path('', views.home, name='home'),
+    path('complete-level/', views.complete_level, name='complete_level'),
     path('puzzles/', views.puzzle_list, name='puzzle_list'),
     path('puzzles/<int:pk>/', views.puzzle_detail, name='puzzle_detail'),
     path('puzzles/create/', views.puzzle_create, name='puzzle_create'),

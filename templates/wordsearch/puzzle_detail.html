@@ -1,0 +1,651 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ puzzle.title }} - WordSearch Extreme{% endblock %}
+
+{% block extra_css %}
+<style>
+    .confetti {
+        position: absolute;
+        width: 10px;
+        height: 10px;
+        background: #ff6b6b;
+        animation: confetti-fall 3s linear infinite;
+    }
+    
+    .confetti:nth-child(2n) { background: #4ecdc4; animation-delay: -0.5s; }
+    .confetti:nth-child(3n) { background: #45b7d1; animation-delay: -1s; }
+    .confetti:nth-child(4n) { background: #f9ca24; animation-delay: -1.5s; }
+    .confetti:nth-child(5n) { background: #6c5ce7; animation-delay: -2s; }
+    
+    @keyframes confetti-fall {
+        0% {
+            transform: translateY(-100vh) rotate(0deg);
+            opacity: 1;
+        }
+        100% {
+            transform: translateY(100vh) rotate(720deg);
+            opacity: 0;
+        }
+    }
+    
+    .celebration-modal .modal-content {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 20px;
+        overflow: hidden;
+    }
+    
+    .celebration-icon {
+        font-size: 4rem;
+        animation: bounce 2s infinite;
+    }
+    
+    @keyframes bounce {
+        0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+        40% { transform: translateY(-30px); }
+        60% { transform: translateY(-15px); }
+    }
+    
+    .word-hint {
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        backdrop-filter: blur(10px);
+        border-radius: 10px;
+        padding: 10px;
+        margin: 5px;
+        transition: all 0.3s ease;
+    }
+    
+    .word-hint:hover {
+        background: rgba(255, 255, 255, 0.2);
+        transform: translateY(-2px);
+    }
+    
+    .puzzle-grid {
+        display: grid;
+        gap: 2px;
+        max-width: 500px;
+        margin: 0 auto;
+        background-color: #f8f9fa;
+        padding: 10px;
+        border-radius: 10px;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    
+    .puzzle-cell {
+        width: 35px;
+        height: 35px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: white;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        font-weight: bold;
+        font-size: 14px;
+        cursor: pointer;
+        user-select: none;
+        transition: all 0.2s ease;
+    }
+    
+    .puzzle-cell:hover {
+        background-color: #e9ecef;
+        transform: scale(1.05);
+    }
+    
+    .puzzle-cell.selected {
+        background-color: #007bff;
+        color: white;
+        border-color: #0056b3;
+    }
+    
+    .puzzle-cell.found {
+        background-color: #28a745;
+        color: white;
+        border-color: #1e7e34;
+    }
+    
+    .puzzle-container {
+        text-align: center;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- Puzzle Info Sidebar -->
+        <div class="col-lg-3 col-md-4 mb-4">
+            <div class="card card-custom h-100">
+                <div class="card-header card-header-custom">
+                    <h4 class="mb-0">
+                        <i class="fas fa-info-circle"></i> Puzzle Info
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <h5 class="card-title">{{ puzzle.title }}</h5>
+                    
+                    <div class="mb-3">
+                        <span class="badge difficulty-{{ puzzle.difficulty }} fs-6 px-3 py-2">
+                            <i class="fas fa-layer-group"></i> {{ puzzle.get_difficulty_display }}
+                        </span>
+                    </div>
+                    
+                    {% if puzzle.category %}
+                    <p><strong>Category:</strong> {{ puzzle.category }}</p>
+                    {% endif %}
+                    
+                    {% if puzzle.description %}
+                    <p class="text-muted">{{ puzzle.description }}</p>
+                    {% endif %}
+                    
+                    <div class="stats-grid">
+                        <div class="row text-center g-2">
+                            <div class="col-6">
+                                <div class="stats-card small">
+                                    <span class="stats-number">{{ puzzle.grid_size }}x{{ puzzle.grid_size }}</span>
+                                    <span class="stats-label">Grid Size</span>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="stats-card small">
+                                    <span class="stats-number">{{ puzzle.words|length }}</span>
+                                    <span class="stats-label">Words</span>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="stats-card small">
+                                    <span class="stats-number">{{ puzzle.play_count }}</span>
+                                    <span class="stats-label">Plays</span>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="stats-card small">
+                                    <span class="stats-number" id="timeDisplay">00:00</span>
+                                    <span class="stats-label">Time</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    
+                    <!-- Progress -->
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Progress</span>
+                            <span id="progressText">0 / {{ puzzle.words|length }}</span>
+                        </div>
+                        <div class="progress progress-custom">
+                            <div class="progress-bar progress-bar-custom" id="progressBar" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Control Buttons -->
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-success-gradient" id="startBtn" onclick="startGame()">
+                            <i class="fas fa-play"></i> Start Game
+                        </button>
+                        <button class="btn btn-outline-warning" id="pauseBtn" onclick="pauseGame()" style="display: none;">
+                            <i class="fas fa-pause"></i> Pause
+                        </button>
+                        <button class="btn btn-outline-info" id="hintBtn" onclick="getHint()">
+                            <i class="fas fa-lightbulb"></i> Hint
+                        </button>
+                        <button class="btn btn-outline-secondary" onclick="resetGame()">
+                            <i class="fas fa-redo"></i> Reset
+                        </button>
+                    </div>
+                    
+                    {% if user.is_authenticated %}
+                    <hr>
+                    <div class="text-center">
+                        <small class="text-muted">
+                            <i class="fas fa-user"></i> Playing as {{ user.username }}
+                        </small>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Main Game Area -->
+        <div class="col-lg-6 col-md-8 mb-4">
+            <div class="puzzle-container">
+                <h3 class="text-center mb-4">{{ puzzle.title }}</h3>
+                
+                <!-- Game Grid -->
+                <div class="puzzle-grid" id="puzzleGrid" 
+                     style="grid-template-columns: repeat({{ puzzle.grid_size }}, 1fr);">
+                    {% for row in puzzle.grid_data %}
+                        {% for cell in row %}
+                            <div class="puzzle-cell" 
+                                 data-row="{{ forloop.parentloop.counter0 }}" 
+                                 data-col="{{ forloop.counter0 }}"
+                                 data-letter="{{ cell }}">
+                                {{ cell }}
+                            </div>
+                        {% endfor %}
+                    {% endfor %}
+                </div>
+                
+                <!-- Game Status -->
+                <div class="text-center mt-3">
+                    <div id="gameStatus" class="alert alert-info">
+                        <i class="fas fa-info-circle"></i> Click "Start Game" to begin!
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Words List Sidebar -->
+        <div class="col-lg-3 mb-4">
+            <div class="words-list">
+                <h5 class="text-center mb-3">
+                    <i class="fas fa-list"></i> Words to Find
+                </h5>
+                
+                <div id="wordsList">
+                    {% for word in puzzle.words %}
+                        <div class="word-item" data-word="{{ word|upper }}">
+                            {{ word|upper }}
+                        </div>
+                    {% endfor %}
+                </div>
+                
+                <hr>
+                
+                <!-- Found Words -->
+                <div>
+                    <h6><i class="fas fa-check-circle text-success"></i> Found Words</h6>
+                    <div id="foundWordsList" class="text-muted">
+                        <small>No words found yet...</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Celebration Modal -->
+<div class="modal fade celebration-modal" id="celebrationModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body text-center py-5">
+                <div class="celebration-icon">í¾</div>
+                <h2 class="mb-3">Congratulations!</h2>
+                <p class="lead">You found all the words!</p>
+                <div class="row text-center mt-4">
+                    <div class="col-4">
+                        <div class="h3" id="finalTime">--:--</div>
+                        <small>Time</small>
+                    </div>
+                    <div class="col-4">
+                        <div class="h3" id="finalWords">{{ puzzle.words|length }}</div>
+                        <small>Words Found</small>
+                    </div>
+                    <div class="col-4">
+                        <div class="h3" id="finalScore">---</div>
+                        <small>Score</small>
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <button class="btn btn-light btn-lg me-2" onclick="playAgain()">
+                        <i class="fas fa-redo"></i> Play Again
+                    </button>
+                    <a href="{% url 'wordsearch:puzzle_list' %}" class="btn btn-outline-light btn-lg">
+                        <i class="fas fa-th-large"></i> More Puzzles
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Hint Modal -->
+<div class="modal fade" id="hintModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-lightbulb text-warning"></i> Puzzle Hints
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="hintContent">
+                    <p class="mb-3">Here are some hints to help you:</p>
+                    <div id="hintsList"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Game state
+let gameState = {
+    isPlaying: false,
+    isPaused: false,
+    startTime: null,
+    elapsedTime: 0,
+    timer: null,
+    selectedCells: [],
+    foundWords: [],
+    wordsToFind: {{ puzzle.words|safe }},
+    isSelecting: false,
+    hintCount: 0
+};
+
+// Initialize the game
+document.addEventListener('DOMContentLoaded', function() {
+    initializeGrid();
+    updateProgress();
+});
+
+function initializeGrid() {
+    const cells = document.querySelectorAll('.puzzle-cell');
+    
+    cells.forEach(cell => {
+        cell.addEventListener('mousedown', startSelection);
+        cell.addEventListener('mouseenter', continueSelection);
+        cell.addEventListener('mouseup', endSelection);
+    });
+    
+    // Prevent text selection
+    document.addEventListener('selectstart', e => e.preventDefault());
+}
+
+function startGame() {
+    if (gameState.isPlaying) return;
+    
+    gameState.isPlaying = true;
+    gameState.isPaused = false;
+    gameState.startTime = Date.now() - gameState.elapsedTime;
+    gameState.timer = setInterval(updateTimer, 1000);
+    
+    document.getElementById('startBtn').style.display = 'none';
+    document.getElementById('pauseBtn').style.display = 'block';
+    document.getElementById('gameStatus').innerHTML = 
+        '<i class="fas fa-play-circle text-success"></i> Game in progress... Find the words!';
+    document.getElementById('gameStatus').className = 'alert alert-success';
+}
+
+function pauseGame() {
+    if (!gameState.isPlaying) return;
+    
+    if (gameState.isPaused) {
+        // Resume
+        gameState.isPaused = false;
+        gameState.startTime = Date.now() - gameState.elapsedTime;
+        gameState.timer = setInterval(updateTimer, 1000);
+        document.getElementById('pauseBtn').innerHTML = '<i class="fas fa-pause"></i> Pause';
+        document.getElementById('gameStatus').innerHTML = 
+            '<i class="fas fa-play-circle text-success"></i> Game resumed!';
+    } else {
+        // Pause
+        gameState.isPaused = true;
+        clearInterval(gameState.timer);
+        document.getElementById('pauseBtn').innerHTML = '<i class="fas fa-play"></i> Resume';
+        document.getElementById('gameStatus').innerHTML = 
+            '<i class="fas fa-pause-circle text-warning"></i> Game paused';
+        document.getElementById('gameStatus').className = 'alert alert-warning';
+    }
+}
+
+function resetGame() {
+    // Reset game state
+    gameState.isPlaying = false;
+    gameState.isPaused = false;
+    gameState.elapsedTime = 0;
+    gameState.foundWords = [];
+    gameState.selectedCells = [];
+    gameState.hintCount = 0;
+    
+    clearInterval(gameState.timer);
+    
+    // Reset UI
+    document.getElementById('startBtn').style.display = 'block';
+    document.getElementById('pauseBtn').style.display = 'none';
+    document.getElementById('timeDisplay').textContent = '00:00';
+    document.getElementById('gameStatus').innerHTML = 
+        '<i class="fas fa-info-circle"></i> Click "Start Game" to begin!';
+    document.getElementById('gameStatus').className = 'alert alert-info';
+    
+    // Reset grid
+    document.querySelectorAll('.puzzle-cell').forEach(cell => {
+        cell.classList.remove('selected', 'found-word');
+    });
+    
+    // Reset words list
+    document.querySelectorAll('.word-item').forEach(item => {
+        item.classList.remove('found');
+    });
+    
+    document.getElementById('foundWordsList').innerHTML = 
+        '<small class="text-muted">No words found yet...</small>';
+    
+    updateProgress();
+}
+
+function updateTimer() {
+    if (gameState.isPaused) return;
+    
+    gameState.elapsedTime = Date.now() - gameState.startTime;
+    const minutes = Math.floor(gameState.elapsedTime / 60000);
+    const seconds = Math.floor((gameState.elapsedTime % 60000) / 1000);
+    document.getElementById('timeDisplay').textContent = 
+        `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+}
+
+function startSelection(event) {
+    if (!gameState.isPlaying || gameState.isPaused) return;
+    
+    gameState.isSelecting = true;
+    gameState.selectedCells = [event.target];
+    event.target.classList.add('selected');
+}
+
+function continueSelection(event) {
+    if (!gameState.isSelecting) return;
+    
+    const cell = event.target;
+    if (!gameState.selectedCells.includes(cell)) {
+        gameState.selectedCells.push(cell);
+        cell.classList.add('selected');
+    }
+}
+
+function endSelection(event) {
+    if (!gameState.isSelecting) return;
+    
+    gameState.isSelecting = false;
+    checkSelectedWord();
+}
+
+function checkSelectedWord() {
+    if (gameState.selectedCells.length < 3) {
+        clearSelection();
+        return;
+    }
+    
+    const selectedWord = gameState.selectedCells
+        .map(cell => cell.dataset.letter)
+        .join('');
+    
+    const reverseWord = selectedWord.split('').reverse().join('');
+    
+    // Check if the selected word matches any target word
+    const foundWord = gameState.wordsToFind.find(word => 
+        word.toUpperCase() === selectedWord || word.toUpperCase() === reverseWord
+    );
+    
+    if (foundWord && !gameState.foundWords.includes(foundWord.toUpperCase())) {
+        // Word found!
+        wordFound(foundWord.toUpperCase());
+    } else {
+        // Not a valid word
+        clearSelection();
+    }
+}
+
+function wordFound(word) {
+    gameState.foundWords.push(word);
+    
+    // Mark cells as found
+    gameState.selectedCells.forEach(cell => {
+        cell.classList.remove('selected');
+        cell.classList.add('found-word');
+    });
+    
+    // Mark word in list as found
+    document.querySelector(`[data-word="${word}"]`).classList.add('found');
+    
+    // Update found words list
+    updateFoundWordsList();
+    
+    // Update progress
+    updateProgress();
+    
+    // Check if all words are found
+    if (gameState.foundWords.length === gameState.wordsToFind.length) {
+        gameComplete();
+    }
+    
+    gameState.selectedCells = [];
+}
+
+function clearSelection() {
+    gameState.selectedCells.forEach(cell => {
+        cell.classList.remove('selected');
+    });
+    gameState.selectedCells = [];
+}
+
+function updateFoundWordsList() {
+    const foundList = document.getElementById('foundWordsList');
+    if (gameState.foundWords.length === 0) {
+        foundList.innerHTML = '<small class="text-muted">No words found yet...</small>';
+    } else {
+        foundList.innerHTML = gameState.foundWords
+            .map(word => `<span class="badge bg-success me-1 mb-1">${word}</span>`)
+            .join('');
+    }
+}
+
+function updateProgress() {
+    const progress = (gameState.foundWords.length / gameState.wordsToFind.length) * 100;
+    document.getElementById('progressBar').style.width = progress + '%';
+    document.getElementById('progressText').textContent = 
+        `${gameState.foundWords.length} / ${gameState.wordsToFind.length}`;
+}
+
+function gameComplete() {
+    gameState.isPlaying = false;
+    clearInterval(gameState.timer);
+    
+    // Calculate score
+    const timeBonus = Math.max(1000 - gameState.elapsedTime / 1000, 100);
+    const hintPenalty = gameState.hintCount * 50;
+    const score = Math.round(timeBonus - hintPenalty + (gameState.wordsToFind.length * 100));
+    
+    // Update celebration modal
+    document.getElementById('finalTime').textContent = document.getElementById('timeDisplay').textContent;
+    document.getElementById('finalScore').textContent = score;
+    
+    // Show celebration
+    createConfetti();
+    setTimeout(() => {
+        const modal = new bootstrap.Modal(document.getElementById('celebrationModal'));
+        modal.show();
+    }, 1000);
+    
+    // Update game status
+    document.getElementById('gameStatus').innerHTML = 
+        '<i class="fas fa-trophy text-warning"></i> Congratulations! You found all words!';
+    document.getElementById('gameStatus').className = 'alert alert-success';
+}
+
+function createConfetti() {
+    for (let i = 0; i < 50; i++) {
+        const confetti = document.createElement('div');
+        confetti.className = 'confetti';
+        confetti.style.left = Math.random() * 100 + 'vw';
+        confetti.style.animationDelay = Math.random() * 3 + 's';
+        confetti.style.animationDuration = (Math.random() * 2 + 2) + 's';
+        document.body.appendChild(confetti);
+        
+        setTimeout(() => confetti.remove(), 5000);
+    }
+}
+
+function getHint() {
+    gameState.hintCount++;
+    
+    const unFoundWords = gameState.wordsToFind.filter(word => 
+        !gameState.foundWords.includes(word.toUpperCase())
+    );
+    
+    if (unFoundWords.length === 0) return;
+    
+    const hintsList = document.getElementById('hintsList');
+    hintsList.innerHTML = '';
+    
+    // Show hints for remaining words
+    unFoundWords.slice(0, 3).forEach(word => {
+        const hint = generateWordHint(word);
+        const hintDiv = document.createElement('div');
+        hintDiv.className = 'word-hint mb-2';
+        hintDiv.innerHTML = `
+            <strong>${word.toUpperCase()}</strong><br>
+            <small>${hint}</small>
+        `;
+        hintsList.appendChild(hintDiv);
+    });
+    
+    const modal = new bootstrap.Modal(document.getElementById('hintModal'));
+    modal.show();
+}
+
+function generateWordHint(word) {
+    const hints = {
+        'CAT': 'A common household pet that purrs',
+        'DOG': 'Man\'s best friend, often barks',
+        'LION': 'King of the jungle',
+        'TIGER': 'Orange big cat with black stripes',
+        'ELEPHANT': 'Largest land mammal with a trunk',
+        // Add more hints as needed
+    };
+    
+    return hints[word.toUpperCase()] || `A ${word.length}-letter word starting with "${word[0]}"`;
+}
+
+function playAgain() {
+    document.getElementById('celebrationModal').querySelector('.btn-close')?.click();
+    resetGame();
+}
+
+// Keyboard shortcuts
+document.addEventListener('keydown', function(e) {
+    if (e.key === ' ') {
+        e.preventDefault();
+        if (!gameState.isPlaying) {
+            startGame();
+        } else {
+            pauseGame();
+        }
+    } else if (e.key === 'r' || e.key === 'R') {
+        resetGame();
+    } else if (e.key === 'h' || e.key === 'H') {
+        getHint();
+    }
+});
+</script>
+{% endblock %}
