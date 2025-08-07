@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+
+{% block title %}Puzzles - WordSearch Extreme{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <h1>Word Search Puzzles</h1>
+        
+        <!-- Filter by difficulty -->
+        <div class="mb-3">
+            <a href="{% url 'wordsearch:puzzle_list' %}" class="btn btn-outline-secondary {% if not selected_difficulty %}active{% endif %}">
+                All
+            </a>
+            {% for value, display in difficulty_choices %}
+            <a href="{% url 'wordsearch:puzzle_list' %}?difficulty={{ value }}" 
+               class="btn btn-outline-secondary {% if selected_difficulty == value %}active{% endif %}">
+                {{ display }}
+            </a>
+            {% endfor %}
+        </div>
+        
+        <div class="row">
+            {% for puzzle in puzzles %}
+            <div class="col-md-6 col-lg-4 mb-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">{{ puzzle.title }}</h5>
+                        <p class="card-text">{{ puzzle.description|truncatewords:20 }}</p>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="badge bg-primary">{{ puzzle.get_difficulty_display }}</span>
+                            <small class="text-muted">{{ puzzle.word_count }} words</small>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small class="text-muted">
+                                By {{ puzzle.created_by.username }} • 
+                                {{ puzzle.created_at|date:"M d, Y" }}
+                            </small>
+                        </div>
+                    </div>
+                    <div class="card-footer">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <a href="{% url 'wordsearch:puzzle_detail' puzzle.pk %}" class="btn btn-primary btn-sm">
+                                Play
+                            </a>
+                            <small class="text-muted">{{ puzzle.play_count }} plays</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-12">
+                <div class="text-center">
+                    <h3>No puzzles found</h3>
+                    <p class="text-muted">
+                        {% if selected_difficulty %}
+                        No {{ selected_difficulty }} puzzles available.
+                        {% else %}
+                        No puzzles available yet.
+                        {% endif %}
+                    </p>
+                    {% if user.is_authenticated %}
+                    <a href="{% url 'wordsearch:puzzle_create' %}" class="btn btn-primary">
+                        Create the First Puzzle
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}
